@@ -14,3 +14,4 @@ It also Auto-Saves the notes as "my-notes-autobackup.json" every 60 seconds inte
 # INSTALLATION
 Simply download Rashid-Thunderbird-Notepad.xpi
 Add it as an Extension to your Thunderbird Installation
+ 
