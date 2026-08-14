@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>My Notes</title>
+  <style>
+    /* ── Reset & tokens ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --surface: #f5f5f5;
+      --surface2: #ebebeb;
+      --border: #ddd;
+      --text: #222;
+      --text-muted: #777;
+      --accent: #4a9eff;
+      --accent-hover: #2e86f5;
+      --sidebar-w: 190px;
+      --toolbar-h: 46px;
+      --radius: 5px;
+      --font-size: 16px;
+      --font-family: system-ui, sans-serif;
+      --danger: #e05050;
+    }
+
+    [data-theme="dark"] {
+      --bg: #1e1e1e;
+      --surface: #2a2a2a;
+      --surface2: #333;
+      --border: #444;
+      --text: #e8e8e8;
+      --text-muted: #999;
+      --accent: #5aabff;
+      --accent-hover: #79bfff;
+    }
+
+    [data-theme="sepia"] {
+      --bg: #f5efe6;
+      --surface: #ede4d5;
+      --surface2: #e4d9c6;
+      --border: #c9b99a;
+      --text: #4a3728;
+      --text-muted: #7a6555;
+      --accent: #b07030;
+      --accent-hover: #9a5f25;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-family);
+      font-size: var(--font-size);
+    }
+
+    /* ── Layout ── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Toolbar (row 1: formatting) ── */
+    #toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 4px 8px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      min-height: var(--toolbar-h);
+      flex-shrink: 0;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    #toolbar::-webkit-scrollbar { display: none; }
+
+    #toolbar.hidden { display: none; }
+
+
+    #main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    #sidebar.hidden { display: none; }
+
+    #sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    #new-note-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      width: 24px;
+      height: 24px;
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    #new-note-btn:hover { background: var(--accent-hover); }
+
+    #notes-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 0;
+    }
+
+    .note-item {
+      display: flex;
+      align-items: center;
+      padding: 7px 10px;
+      cursor: pointer;
+      border-radius: 0;
+      position: relative;
+      gap: 4px;
+    }
+
+    .note-item:hover { background: var(--surface2); }
+
+    .note-item.active {
+      background: var(--accent);
+      color: white;
+    }
+
+    .note-item.active .note-item-actions button { color: white; }
+
+    .note-item-name {
+      flex: 1;
+      font-size: 16px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    .note-item-name-input {
+      flex: 1;
+      font-size: 16px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      padding: 1px 3px;
+      width: 100%;
+      min-width: 0;
+      outline: none;
+    }
+
+    .note-item.active .note-item-name-input {
+      color: white;
+      border-color: rgba(255,255,255,0.5);
+      background: rgba(255,255,255,0.15);
+    }
+
+    .note-item-actions {
+      display: none;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .note-item:hover .note-item-actions,
+    .note-item.active .note-item-actions { display: flex; }
+
+    .note-item-actions button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 3px 4px;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .note-item-actions button:hover {
+      background: rgba(0,0,0,0.1);
+    }
+
+    #sidebar-footer {
+      padding: 8px 10px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 5px 6px;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      line-height: 1;
+      transition: background 0.1s;
+    }
+
+    .icon-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .icon-btn.active-toggle {
+      color: var(--accent);
+    }
+
+    /* ── Editor ── */
+    #editor-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #editor {
+      flex: 1;
+      padding: 16px 20px 16px 28px; /* left padding for margin */
+      outline: none;
+      overflow-y: auto;
+      line-height: 1.45;
+      color: var(--text);
+      background: var(--bg);
+      caret-color: var(--accent);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    #editor:empty::before {
+      content: "Start writing…";
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    /* ── Toolbar buttons ── */
+    .tb-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text);
+      padding: 4px 7px;
+      border-radius: 4px;
+      font-size: 17px;
+      line-height: 1.3;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      white-space: nowrap;
+      min-height: 30px;
+    }
+
+    .tb-btn svg, .icon-btn svg, #new-note-btn svg, .note-item-actions button svg {
+      pointer-events: none;
+      flex-shrink: 0;
+      display: block;
+    }
+
+    .tb-btn:hover { background: var(--surface2); }
+    .tb-btn.pressed { background: var(--surface2); color: var(--accent); }
+
+    .tb-sep {
+      width: 1px;
+      height: 22px;
+      background: var(--border);
+      margin: 0 3px;
+      flex-shrink: 0;
+    }
+
+    .tb-spacer { display: none; }
+
+    /* Font controls in toolbar */
+    #toolbar label {
+      font-size: 15px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      font-weight: 600;
+    }
+
+    #font-family-select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      padding: 3px 6px;
+      font-size: 15px;
+      cursor: pointer;
+      outline: none;
+      width: 130px;
+    }
+
+    #font-size-select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      padding: 3px 6px;
+      font-size: 15px;
+      cursor: pointer;
+      outline: none;
+      width: 64px;
+    }
+
+    #font-color-btn {
+      position: relative;
+      cursor: pointer;
+    }
+
+    #font-color-btn input[type="color"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    #color-preview {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border-radius: 3px;
+      border: 2px solid var(--border);
+      background: #222;
+      vertical-align: middle;
+      pointer-events: none;
+    }
+
+    #theme-select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      padding: 3px 6px;
+      font-size: 15px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    /* ── Status bar ── */
+    #statusbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 12px;
+      font-size: 14px;
+      color: var(--text-muted);
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+      height: 24px;
+    }
+
+    /* ── Modals ── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-backdrop.hidden { display: none; }
+
+    .modal {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      min-width: 280px;
+      max-width: 420px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    }
+
+    .modal h3 {
+      margin-bottom: 12px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .modal input[type="text"], .modal textarea {
+      width: 100%;
+      padding: 7px 9px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 16px;
+      outline: none;
+      margin-bottom: 12px;
+    }
+
+    .modal textarea {
+      height: 100px;
+      resize: vertical;
+      font-family: monospace;
+    }
+
+    .modal input:focus, .modal textarea:focus {
+      border-color: var(--accent);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    .btn-ghost {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .btn-ghost:hover { background: var(--border); }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    /* ── Export/Import panel ── */
+    #export-panel {
+      padding: 12px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: none;
+    }
+
+    #export-panel.visible { display: block; }
+
+    #export-panel textarea {
+      width: 100%;
+      height: 90px;
+      font-family: monospace;
+      font-size: 13px;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px;
+      resize: none;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Word count chip ── */
+    #word-count { font-variant-numeric: tabular-nums; }
+
+    /* ── Find bar ── */
+    #find-bar {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 16px;
+    }
+
+    #find-bar.visible { display: flex; }
+
+    #find-input {
+      flex: 1;
+      padding: 3px 7px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 16px;
+      outline: none;
+    }
+
+    #find-input:focus { border-color: var(--accent); }
+    #find-count { color: var(--text-muted); font-size: 15px; }
+
+    mark {
+      background: #ffe06a;
+      color: #222;
+      border-radius: 2px;
+    }
+
+    [data-theme="dark"] mark { background: #b8860b; color: #fff; }
+
+    /* ── Google Auth Modal ── */
+    #auth-modal .modal { max-width: 380px; }
+    #auth-modal .google-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    #auth-modal .google-logo svg { flex-shrink: 0; }
+    #auth-modal .google-logo span { font-size: 18px; font-weight: 700; color: var(--text); }
+    .auth-field { margin-bottom: 12px; }
+    .auth-field label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 5px; color: var(--text-muted); }
+    .auth-field input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 16px;
+      outline: none;
+    }
+    .auth-field input:focus { border-color: #4285f4; box-shadow: 0 0 0 2px rgba(66,133,244,0.2); }
+    #auth-error { font-size: 14px; color: var(--danger); margin-bottom: 10px; display: none; }
+    #auth-error.visible { display: block; }
+    .btn-google {
+      width: 100%;
+      background: #4285f4;
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      padding: 9px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-google:hover { background: #3367d6; }
+    .btn-google:disabled { opacity: 0.6; cursor: not-allowed; }
+    .auth-divider {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin: 10px 0;
+      position: relative;
+    }
+    .auth-divider::before, .auth-divider::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 40%;
+      height: 1px;
+      background: var(--border);
+    }
+    .auth-divider::before { left: 0; }
+    .auth-divider::after { right: 0; }
+    .auth-note { font-size: 13px; color: var(--text-muted); text-align: center; margin-top: 10px; }
+
+    .auth-spinner {
+      display: inline-block; width: 12px; height: 12px;
+      border: 2px solid rgba(0,0,0,0.15); border-top-color: var(--text-muted);
+      border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Toolbar: Text formatting + Font controls + View -->
+  <div id="toolbar">
+    <button class="tb-btn" id="btn-bold" title="Bold (Ctrl+B)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg></button>
+    <button class="tb-btn" id="btn-italic" title="Italic (Ctrl+I)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
+    <button class="tb-btn" id="btn-underline" title="Underline (Ctrl+U)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"/><line x1="4" y1="21" x2="20" y2="21"/></svg></button>
+    <button class="tb-btn" id="btn-strike" title="Strikethrough"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"/><path d="M17.5 7C16.5 5.5 14.8 5 12 5c-3 0-5 1.5-5 3.5 0 .8.4 1.5 1 2"/><path d="M6.5 17C7.5 18.5 9.5 19 12 19c3 0 5.5-1.5 5.5-4 0-1-.4-2-1.2-2.7"/></svg></button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" id="btn-h1" title="Heading 1">H1</button>
+    <button class="tb-btn" id="btn-h2" title="Heading 2">H2</button>
+    <button class="tb-btn" id="btn-h3" title="Heading 3">H3</button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" id="btn-ul" title="Bullet list"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg></button>
+    <button class="tb-btn" id="btn-ol" title="Numbered list"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4" stroke-width="1.5"/><path d="M4 10h2" stroke-width="1.5"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" stroke-width="1.5"/></svg></button>
+    <button class="tb-btn" id="btn-unul" title="Remove bullet list"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/><line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2"/></svg></button>
+    <button class="tb-btn" id="btn-unol" title="Remove numbered list"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4" stroke-width="1.5"/><path d="M4 10h2" stroke-width="1.5"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" stroke-width="1.5"/><line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2"/></svg></button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" id="btn-indent" title="Indent (Tab)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/><line x1="7" y1="12" x2="21" y2="12"/><polyline points="3 9 7 12 3 15"/></svg></button>
+    <button class="tb-btn" id="btn-outdent" title="Outdent (Shift+Tab)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/><line x1="11" y1="12" x2="21" y2="12"/><polyline points="7 9 3 12 7 15"/></svg></button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" id="btn-undo" title="Undo (Ctrl+Z)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13C4.5 8.5 9 5 15 7c3 1.5 5 4 5 8"/></svg></button>
+    <button class="tb-btn" id="btn-redo" title="Redo (Ctrl+Y)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M21 13C19.5 8.5 15 5 9 7c-3 1.5-5 4-5 8"/></svg></button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" id="btn-link" title="Insert link"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+    <button class="tb-btn" id="btn-image" title="Insert image"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
+    <input type="file" id="img-file-input" accept="image/*" style="display:none"/>
+    <div class="tb-sep"></div>
+    <label>Font:</label>
+    <select id="font-family-select" title="Font family">
+      <option value="">System Default</option>
+      <option value="Arial">Arial</option>
+      <option value="Georgia">Georgia</option>
+      <option value="Times New Roman">Times New Roman</option>
+      <option value="Courier New">Courier New</option>
+      <option value="Verdana">Verdana</option>
+      <option value="Trebuchet MS">Trebuchet MS</option>
+      <option value="Palatino">Palatino</option>
+      <option value="Garamond">Garamond</option>
+      <option value="Comic Sans MS">Comic Sans MS</option>
+    </select>
+    <label>Size:</label>
+    <select id="font-size-select" title="Font size">
+      <option value="10">10</option>
+      <option value="11">11</option>
+      <option value="12">12</option>
+      <option value="13">13</option>
+      <option value="14">14</option>
+      <option value="15">15</option>
+      <option value="16" selected>16</option>
+      <option value="18">18</option>
+      <option value="20">20</option>
+      <option value="22">22</option>
+      <option value="24">24</option>
+      <option value="28">28</option>
+      <option value="32">32</option>
+    </select>
+    <div class="tb-sep"></div>
+    <label>Color:</label>
+    <button class="tb-btn" id="font-color-btn" title="Font color">
+      <span id="color-preview"></span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+      <input type="color" id="font-color-input" value="#222222" title="Font color"/>
+    </button>
+    <button class="tb-btn" id="btn-highlight" title="Highlight text"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+    <div class="tb-sep"></div>
+    <label>Theme:</label>
+    <select id="theme-select" title="Theme">
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+      <option value="sepia">Sepia</option>
+    </select>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" id="btn-find" title="Find (Ctrl+F)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+    <button class="tb-btn icon-btn" id="btn-export" title="Export / Import"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 16 12 21 17 16"/><polyline points="7 8 12 3 17 8"/><line x1="12" y1="3" x2="12" y2="21"/></svg></button>
+    <button class="tb-btn icon-btn" id="btn-sync-now" title="Sync with Google Drive"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
+    <button class="tb-btn icon-btn" id="btn-close-notepad" title="Close Notepad"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>
+
+  <!-- Find bar -->
+  <div id="find-bar">
+    <input id="find-input" type="text" placeholder="Find in note…"/>
+    <span id="find-count"></span>
+    <button class="icon-btn" id="find-prev" title="Previous"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg></button>
+    <button class="icon-btn" id="find-next" title="Next"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+    <button class="icon-btn" id="find-close" title="Close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>
+
+  <!-- Export panel -->
+  <div id="export-panel">
+    <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+      <button class="btn btn-ghost" id="exp-download-html">Download .html (all notes)</button>
+      <button class="btn btn-ghost" id="exp-import-json">Import backup JSON</button>
+      <button class="btn btn-ghost" id="exp-export-json">Export all notes JSON</button>
+      <input type="file" id="import-json-file-input" accept=".json,application/json" style="display:none"/>
+      <button class="btn btn-ghost" style="margin-left:auto" id="exp-close">✕ Close</button>
+    </div>
+  </div>
+
+  <!-- Main area -->
+  <div id="main">
+
+    <!-- Sidebar (no hide-sidebar button inside) -->
+    <div id="sidebar">
+      <div id="sidebar-header">
+        <span>Notes</span>
+        <button id="new-note-btn" title="New note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+      </div>
+      <div id="notes-list"></div>
+      <div id="sidebar-footer">
+        <button class="icon-btn" id="btn-toggle-toolbar" title="Toggle toolbar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      </div>
+    </div>
+
+    <!-- Editor -->
+    <div id="editor-wrap">
+      <div id="editor" contenteditable="true" spellcheck="true"></div>
+    </div>
+
+  </div>
+
+  <!-- Status bar -->
+  <div id="statusbar">
+    <span id="note-name-status"></span>
+    <span id="word-count">0 words</span>
+    <span id="save-status"></span>
+    <span id="autobackup-status" style="font-size:14px;color:var(--text-muted)"></span>
+    <span id="sync-status" style="font-size:14px;color:var(--text-muted)"></span>
+  </div>
+
+</div>
+
+<!-- Delete confirmation modal -->
+<div class="modal-backdrop hidden" id="delete-modal">
+  <div class="modal">
+    <h3>Delete note?</h3>
+    <p style="font-size:15px;color:var(--text-muted);margin-bottom:16px">
+      "<span id="delete-note-name"></span>" will be permanently deleted.
+    </p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="delete-cancel">Cancel</button>
+      <button class="btn btn-danger" id="delete-confirm">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename modal -->
+<div class="modal-backdrop hidden" id="rename-modal">
+  <div class="modal">
+    <h3>Rename note</h3>
+    <input type="text" id="rename-input" placeholder="Note name"/>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="rename-cancel">Cancel</button>
+      <button class="btn btn-primary" id="rename-confirm">Rename</button>
+    </div>
+  </div>
+</div>
+
+<!-- Link modal -->
+<div class="modal-backdrop hidden" id="link-modal">
+  <div class="modal">
+    <h3>Insert link</h3>
+    <input type="text" id="link-text-input" placeholder="Link text"/>
+    <input type="text" id="link-url-input" placeholder="URL (https://…)"/>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="link-cancel">Cancel</button>
+      <button class="btn btn-primary" id="link-confirm">Insert</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import JSON modal -->
+<div class="modal-backdrop hidden" id="import-modal">
+  <div class="modal">
+    <h3>Import notes from JSON</h3>
+    <p style="font-size:14px;color:var(--text-muted);margin-bottom:8px" id="import-summary">Select a backup JSON file exported from My Notes.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="import-cancel">Cancel</button>
+      <button class="btn btn-primary" id="import-confirm" disabled>Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- Close/Save Notes modal -->
+<div class="modal-backdrop hidden" id="close-save-modal">
+  <div class="modal">
+    <h3>Save notes before closing?</h3>
+    <p style="font-size:14px;color:var(--text-muted);margin-bottom:16px">
+      Would you like to save a backup of all your notes before closing the Notepad?
+    </p>
+    <div class="modal-actions" style="flex-wrap:wrap">
+      <button class="btn btn-ghost" id="close-cancel">Cancel</button>
+      <button class="btn btn-ghost" id="close-no-save">Don't Save</button>
+      <button class="btn btn-primary" id="close-save-json">Save as JSON</button>
+      <button class="btn btn-primary" id="close-save-html">Save as HTML</button>
+    </div>
+  </div>
+</div>
+
+<!-- Save Folder Modal -->
+<div class="modal-backdrop hidden" id="auth-modal">
+  <div class="modal" style="min-width:300px;max-width:400px">
+    <div class="google-logo">
+      <span style="font-size:24px">💾</span>
+      <span>Set Save Folder</span>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.6">
+      Enter a subfolder name. Notes will be saved as <strong>.md</strong> files inside
+      your Thunderbird downloads folder.
+    </p>
+    <div class="auth-field">
+      <label>Subfolder name</label>
+      <input type="text" id="auth-subfolder" placeholder="MyNotes" spellcheck="false"
+             style="font-family:monospace" autocomplete="off"/>
+    </div>
+    <p style="font-size:11px;color:var(--text-muted);margin:6px 0 10px;line-height:1.5">
+      Files land in <code style="background:var(--surface2);padding:1px 4px;border-radius:3px">~/Downloads/<em>subfolder</em>/NoteName.md</code><br/>
+      Change the base folder in Thunderbird → Preferences → Downloads.
+    </p>
+    <div id="auth-error" style="font-size:13px;color:var(--danger);margin-bottom:8px;display:none"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-google" id="btn-auth-save-path" style="flex:1">💾 Save &amp; Sync</button>
+      <button class="btn btn-ghost" id="auth-cancel">Cancel</button>
+    </div>
+    <p class="auth-note">Notes saved as plain Markdown — open them in any text editor.</p>
+  </div>
+</div>
+
+<script src="../gdrive.js"></script>
+
+
+
+
+
+
+
+<script src="panel.js"></script>
+</body>
+</html>
