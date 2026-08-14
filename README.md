@@ -10,3 +10,7 @@ Linux:   ~/Downloads/MyNotes/NoteName.html (or NoteName.json)
 Windows: C:\Users\user\Downloads\MyNotes\NoteName.html (or NoteName.json)
 The user can change their default download folder in Thunderbird preferences.
 It also Auto-Saves the notes as "my-notes-autobackup.json" every 60 seconds interval to the same subfolder
+
+# INSTALLATION
+Simply download Rashid-Thunderbird-Notepad.xpi
+Add it as an Extension to your Thunderbird Installation
